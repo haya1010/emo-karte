@@ -27,13 +27,18 @@ from datetime import datetime
 import pandas as pd
 from janome.tokenizer import Tokenizer
 from sklearn.model_selection import train_test_split
+# from sqlalchemy import create_engine
 t = Tokenizer()
+
 
 base_dir = os.path.dirname(__file__)
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'data.sqlite')
+# engine = create_engine('postgresql://mljqlvtqsfkupr:59faa817216adea9bd1ece6b60ff741ca723d60edd4c965dd058136d3d328206@ec2-52-203-74-38.compute-1.amazonaws.com:5432/dcelbvuhu9qimn')
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'data.sqlite')
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.root_path, 'data.sqlite')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://mljqlvtqsfkupr:59faa817216adea9bd1ece6b60ff741ca723d60edd4c965dd058136d3d328206@ec2-52-203-74-38.compute-1.amazonaws.com:5432/dcelbvuhu9qimn'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -202,11 +207,12 @@ def save_data():
     anticipation = request.form.get('anticipation')
 
     data = Data(review, surprise, sadness, joy, anger, fear, disgust, trust, anticipation)
+    db.create_all()
     db.session.add(data)
     db.session.commit()
-    df = get_dataframe()
+    # df = get_dataframe()
     # if df.iloc[-1, 0] % 10 == 0:
-    update_model()
+    # update_model()
   return render_template('thanks.html')
 
 # def remove_punct(text):
@@ -257,7 +263,8 @@ def load_text_tokenizer(file_name):
         return pickle.load(handle)
 
 
-def each_predict(text, model_name, dir_name):
+# def each_predict(text, model_name, dir_name):
+def each_predict(text, model_name):
 
   wakati_ed = wakati(text)
   wakati_list = []
@@ -268,8 +275,9 @@ def each_predict(text, model_name, dir_name):
 
   np_arr = np.array(tokenized)
   np_arr = pad_sequences(np_arr, maxlen=124)
-  path = 'model/{}/{}'.format(dir_name, model_name)
-  loaded_model = models.load_model(path)
+  # path = 'model/{}/{}'.format(dir_name, model_name)
+  # loaded_model = models.load_model(path)
+  loaded_model = models.load_model(model_name)
   result = loaded_model.predict(np_arr)
   # print(result)
   # if result >= 0.5:
@@ -278,11 +286,12 @@ def each_predict(text, model_name, dir_name):
 
 # 日本語8つの感情
 def predict(text):
-  dirname = get_latest_model()
+  # dirname = get_latest_model()
   result_dic = {}
   model_list = ['Avg. Readers_Surprise', 'Avg. Readers_Sadness', 'Avg. Readers_Joy', 'Avg. Readers_Anger', 'Avg. Readers_Fear', 'Avg. Readers_Disgust', 'Avg. Readers_Trust', 'Avg. Readers_Anticipation']
   for model in model_list:
-    result_dic[model] = each_predict(text, model + '.h5', dirname)
+    # result_dic[model] = each_predict(text, model + '.h5', dirname)
+    result_dic[model] = each_predict(text, model + '.h5')
   return result_dic
 
 
